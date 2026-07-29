@@ -220,3 +220,7 @@ __marimo__/
 
 # vscode
 .vscode/
+
+
+# Banco de dados vetorial local (ChromaDB)
+data/chroma_db/
