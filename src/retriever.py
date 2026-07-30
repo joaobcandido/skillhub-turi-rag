@@ -116,6 +116,15 @@ def retrieve_context(query: str, top_k: int = 3, category_filter: str = None) ->
     }
 
 
+def buscar_contexto(pergunta: str, categoria_filtro: str = None, top_k: int = 3) -> str:
+    """
+    Função wrapper amigável para ser consumida por outros módulos (como o generator.py).
+    Retorna apenas a string de contexto gerada.
+    """
+    resultado = retrieve_context(query=pergunta, top_k=top_k, category_filter=categoria_filtro)
+    return resultado["context_text"]
+
+
 def main():
     # Teste 1: Busca Semântica Geral
     test_query = "Como funciona o reembolso de planos?"
