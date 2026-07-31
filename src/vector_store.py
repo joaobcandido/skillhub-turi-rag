@@ -18,8 +18,8 @@ load_dotenv(dotenv_path=ENV_PATH)
 # Configuração de Logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Modelo de Embedding atualizado e suportado pela API
-EMBEDDING_MODEL = "gemini-embedding-001"
+# Modelo de Embedding oficial e suportado
+EMBEDDING_MODEL = "text-embedding-001"
 
 
 def get_api_key():
@@ -30,15 +30,24 @@ def get_api_key():
     return api_key
 
 
-def generate_embedding(text: str, api_key: str) -> list:
-    """Gera o embedding enviando requisição para o endpoint oficial do Gemini."""
+# 1. Defina o nome oficial do modelo atualizado
+EMBEDDING_MODEL = "gemini-embedding-001"
+
+
+def generate_embedding(text: str, api_key: str, is_query: bool = False) -> list:
+    """Gera o embedding utilizando a chamada oficial REST do Gemini."""
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{EMBEDDING_MODEL}:embedContent?key={api_key}"
+    
+    task_type = "RETRIEVAL_QUERY" if is_query else "RETRIEVAL_DOCUMENT"
+    
     payload = {
         "model": f"models/{EMBEDDING_MODEL}",
         "content": {
             "parts": [{"text": text}]
-        }
+        },
+        "taskType": task_type
     }
+    
     headers = {"Content-Type": "application/json"}
     
     response = requests.post(url, json=payload, headers=headers)
@@ -51,20 +60,25 @@ def generate_embedding(text: str, api_key: str) -> list:
 
 
 def load_chunks():
-    """Carrega os chunks processados do Card 2."""
+    """Carrega os chunks processados do arquivo JSON se nenhum chunk for passado."""
     if not os.path.exists(PROCESSED_FILE):
         raise FileNotFoundError(
-            f"Arquivo não encontrado: {PROCESSED_FILE}. Execute o Card 2 primeiro."
+            f"Arquivo não encontrado: {PROCESSED_FILE}. Execute o processamento de PDFs primeiro."
         )
 
     with open(PROCESSED_FILE, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
-def build_vector_store():
-    """Indexa os chunks no ChromaDB gerando embeddings com Gemini API."""
+def index_chunks_in_chroma(chunks: list = None):
+    """
+    Indexa os chunks no ChromaDB gerando embeddings.
+    Pode receber uma lista de chunks ou carregar direto do arquivo JSON.
+    """
     api_key = get_api_key()
-    chunks = load_chunks()
+    
+    if chunks is None:
+        chunks = load_chunks()
 
     logging.info(f"Carregando {len(chunks)} chunks para indexação vetorial...")
 
@@ -86,13 +100,14 @@ def build_vector_store():
     metadatas = []
     embeddings = []
 
-    for item in chunks:
-        chunk_id = item["id"]
-        text_content = item["text"]
-        metadata = item["metadata"]
+    for idx, item in enumerate(chunks):
+        # Tenta pegar 'id' ou 'chunk_id'; se não existir, gera um ID sequencial
+        chunk_id = item.get("id") or item.get("chunk_id") or f"chunk_{idx + 1}"
+        text_content = item.get("text") or item.get("content") or ""
+        metadata = item.get("metadata", {})
 
         # Gerar Embedding chamando a API oficial
-        vector = generate_embedding(text_content, api_key)
+        vector = generate_embedding(text_content, api_key, is_query=False)
 
         ids.append(chunk_id)
         documents.append(text_content)
@@ -109,15 +124,20 @@ def build_vector_store():
         embeddings=embeddings
     )
 
-    logging.info(f" Sucesso! {len(ids)} vetores foram armazenados em: {CHROMA_PATH}")
+    logging.info(f"Sucesso! {len(ids)} vetores foram armazenados em: {CHROMA_PATH}")
     return collection, api_key
+
+
+def build_vector_store():
+    """Alias/Atalho para index_chunks_in_chroma."""
+    return index_chunks_in_chroma()
 
 
 def test_vector_search(collection, api_key, query="Como funciona o reembolso de planos?"):
     """Valida a busca vetorial por similaridade semântica."""
     logging.info(f"\n🔍 Executando teste de busca para: '{query}'")
 
-    query_vector = generate_embedding(query, api_key)
+    query_vector = generate_embedding(query, api_key, is_query=True)
 
     results = collection.query(
         query_embeddings=[query_vector],
