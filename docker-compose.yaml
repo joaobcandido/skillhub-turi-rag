@@ -1,0 +1,14 @@
+services:
+  turi-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: turi_skillhub_app
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./data/chroma_db:/app/data/chroma_db
+    restart: unless-stopped

@@ -7,6 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent
 sys.path.append(str(BASE_DIR / 'src'))
 
 from generator import gerar_resposta
+from quota_tracker import obter_uso_atual
 
 # 1. Configuração da Página
 st.set_page_config(
@@ -15,7 +16,33 @@ st.set_page_config(
     layout="centered"
 )
 
-# 2. Título e Cabeçalho
+# ---------------------------------------------------------
+# 📊 BARRA LATERAL (SIDEBAR) - CONTADOR DE COTA DO GEMINI
+# ---------------------------------------------------------
+with st.sidebar:
+    st.title("⚙️ Painel do Sistema")
+    st.markdown("---")
+    
+    st.subheader("📊 Uso da Cota Gemini (Hoje)")
+    
+    # Obtém os dados de consumo do dia
+    uso = obter_uso_atual()
+    
+    # Exibe métrica com número total e porcentagem
+    st.metric(
+        label="Requisições Realizadas", 
+        value=f"{uso['total']} / {uso['limite']}",
+        delta=f"{uso['porcentagem']}% do limite",
+        delta_color="inverse"
+    )
+    
+    # Barra de progresso dinâmica (0.0 a 1.0)
+    st.progress(uso['porcentagem'] / 100)
+    
+    st.caption("ℹ️ Limite do Free Tier estimado em 1.500 requisições/dia. Renovado diariamente às 21h.")
+    st.markdown("---")
+
+# 2. Título e Cabeçalho Principal
 st.title("🤖 Turi — Assistente Virtual SkillHub")
 st.caption("Tire suas dúvidas sobre cursos, matrículas, certificados e diretrizes da SkillHub.")
 
