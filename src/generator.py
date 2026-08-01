@@ -48,7 +48,7 @@ def gerar_resposta(pergunta: str, categoria: str = None) -> str:
     if pergunta.strip().lower() in saudacoes:
         return (
             "Olá! Sou o Turi, assistente virtual da SkillHub. "
-            "Como posso ajudar com suas dúvidas sobre nossos cursos, planos e diretrizes hoje?"
+            "Como posso ajudar com suas dúvidas hoje?"
         )
 
     # 1. Recupera o contexto do retriever

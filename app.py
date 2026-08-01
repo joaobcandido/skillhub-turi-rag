@@ -8,6 +8,7 @@ sys.path.append(str(BASE_DIR / 'src'))
 
 from generator import gerar_resposta
 from quota_tracker import obter_uso_atual
+from ingestor import processar_e_indexar_pdf, limpar_base_de_dados
 
 # 1. Configuração da Página
 st.set_page_config(
@@ -16,31 +17,96 @@ st.set_page_config(
     layout="centered"
 )
 
+# 🎨 ESTILIZAÇÃO CSS CUSTOMIZADA
+st.markdown("""
+<style>
+    /* Força a cor verde em todos os botões primários da sidebar */
+    [data-testid="stSidebar"] button[data-testid="baseButton-primary"] {
+        background-color: #2e7d32 !important;
+        background-image: none !important;
+        color: white !important;
+        border: none !important;
+        font-weight: bold !important;
+    }
+    
+    [data-testid="stSidebar"] button[data-testid="baseButton-primary"]:hover {
+        background-color: #1b5e20 !important;
+        background-image: none !important;
+        color: white !important;
+    }
+
+    /* Fallback para versões com nomenclatura de tag antiga */
+    [data-testid="stSidebar"] .stButton > button[kind="primary"] {
+        background-color: #2e7d32 !important;
+        color: white !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------------------------------------------------
-# 📊 BARRA LATERAL (SIDEBAR) - CONTADOR DE COTA DO GEMINI
+# ⚙️ BARRA LATERAL (SIDEBAR)
 # ---------------------------------------------------------
 with st.sidebar:
     st.title("⚙️ Painel do Sistema")
     st.markdown("---")
     
+    # 📊 BLOCO 1: CONTADOR DE COTA DO GEMINI
     st.subheader("📊 Uso da Cota Gemini (Hoje)")
-    
-    # Obtém os dados de consumo do dia
     uso = obter_uso_atual()
-    
-    # Exibe métrica com número total e porcentagem
     st.metric(
         label="Requisições Realizadas", 
         value=f"{uso['total']} / {uso['limite']}",
         delta=f"{uso['porcentagem']}% do limite",
         delta_color="inverse"
     )
-    
-    # Barra de progresso dinâmica (0.0 a 1.0)
     st.progress(uso['porcentagem'] / 100)
-    
     st.caption("ℹ️ Limite do Free Tier estimado em 1.500 requisições/dia. Renovado diariamente às 21h.")
     st.markdown("---")
+
+    # Inicializa a chave do uploader na sessão para permitir a limpeza automática
+    if "uploader_key" not in st.session_state:
+        st.session_state.uploader_key = 0
+
+    # 📁 BLOCO 2: UPLOAD DE NOVOS MANUAIS (PDF)
+    st.subheader("📁 Adicionar Novo Manual (PDF)")
+    arquivo_pdf = st.file_uploader(
+        "Envie um PDF para expandir o conhecimento do Turi:", 
+        type=["pdf"],
+        key=f"pdf_uploader_{st.session_state.uploader_key}"
+    )
+
+    if arquivo_pdf is not None:
+        if st.button("📥 Processar e Indexar PDF", type="primary", use_container_width=True):
+            with st.spinner("Processando e indexando trechos no ChromaDB..."):
+                sucesso, mensagem = processar_e_indexar_pdf(arquivo_pdf)
+                if sucesso:
+                    st.toast("Base de conhecimento atualizada com sucesso!", icon="✅")
+                    # Reseta a caixa de upload incrementando a chave
+                    st.session_state.uploader_key += 1
+                    st.rerun()
+                else:
+                    st.error(mensagem)
+
+    st.markdown("---")
+
+    # 🗑️ BLOCO 3: LIMPEZA E ZERAR BASE DE DADOS
+    st.subheader("🛠️ Manutenção da Base")
+    if st.button("🗑️ Limpar Base de Dados", type="secondary", use_container_width=True):
+        with st.spinner("Limpando ChromaDB e removendo PDFs..."):
+            sucesso, mensagem = limpar_base_de_dados()
+            if sucesso:
+                st.toast(mensagem, icon="🗑️")
+                # Reseta o histórico de conversas do chat
+                st.session_state.messages = [
+                    {
+                        "role": "assistant",
+                        "content": "Olá! Eu sou o **Turi**, assistente virtual da SkillHub. Como posso te ajudar hoje?"
+                    }
+                ]
+                st.session_state.uploader_key += 1
+                st.rerun()
+            else:
+                st.error(mensagem)
 
 # 2. Título e Cabeçalho Principal
 st.title("🤖 Turi — Assistente Virtual SkillHub")
