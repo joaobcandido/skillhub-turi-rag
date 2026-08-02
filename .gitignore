@@ -224,3 +224,6 @@ __marimo__/
 
 # Banco de dados vetorial local (ChromaDB)
 data/chroma_db/
+
+# backup
+backup/ 
