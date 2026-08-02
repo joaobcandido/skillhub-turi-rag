@@ -6,7 +6,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.append(str(BASE_DIR / 'src'))
 
-from generator import gerar_resposta
+from backup.generator import gerar_resposta
 from quota_tracker import obter_uso_atual
 from ingestor import processar_e_indexar_pdf, limpar_base_de_dados
 
