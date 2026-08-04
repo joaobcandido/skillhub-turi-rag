@@ -9,7 +9,7 @@ O **Turi** é um agente inteligente desenvolvido com arquitetura **RAG (Retrieva
 A aplicação foi implantada com sucesso e está operando em uma Instância VM Linux na nuvem da Oracle.
 
 * **☁️ Infraestrutura:** Oracle Cloud Infrastructure (OCI) via Docker Containers.
-
+* **🌐 Aplicação em Produção:** [http://163.176.103.106:8501](http://163.176.103.106:8501)
 ---
 
 ## 🏛️ Arquitetura da Solução
